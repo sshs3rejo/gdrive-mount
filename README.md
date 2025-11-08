@@ -1,4 +1,4 @@
-# 🪣 gdrive-mount
+# 🗃️ gdrive-mount
 
 Um script Bash simples para configurar, montar e abrir o **Google Drive** usando o **rclone** em qualquer distribuição Linux.
 
