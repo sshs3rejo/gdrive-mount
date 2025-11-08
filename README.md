@@ -28,8 +28,14 @@ Antes de usar o script, certifique-se de ter:
 #### Ubuntu / Debian
 ```bash
 sudo apt install rclone fuse xdg-utils -y
+#### Fedora
+```bash
 sudo dnf install rclone fuse xdg-utils -y
+#### Arch
+```bash
 sudo pacman -S rclone fuse2 xdg-utils --noconfirm
 
+Clone o Repositório:
+```bash
 git clone https://github.com/sshs3rejo/gdrive-mount.git
 cd gdrive-mount
