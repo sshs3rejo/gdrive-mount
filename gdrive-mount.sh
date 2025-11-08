@@ -1,44 +1,87 @@
-# ☁️ gdrive-mount
+#!/usr/bin/env bash
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/sshs3rejo/gdrive-mount/main/logo.svg" width="120" alt="gdrive-mount Logo"/>
-</p>
+# ----------------------------------------
+# Configura e monta o Google Drive via Rclone
+# Compatível com qualquer Linux
+# ----------------------------------------
 
-Monte facilmente o **Google Drive** no Linux ou Termux usando o **rclone**.  
-Este script automatiza a configuração e montagem do seu Drive em uma pasta local, de forma simples e intuitiva.
+set -e
 
----
+REMOTE_NAME="gdrive"
+MOUNT_DIR="$HOME/GDrive"
 
-## ⚙️ Funções
+# Detecta navegador padrão
+detect_browser() {
+    for b in xdg-open sensible-browser gnome-open kde-open firefox chromium google-chrome brave vivaldi; do
+        if command -v "$b" >/dev/null 2>&1; then
+            echo "$b"
+            return
+        fi
+    done
+}
 
-- Verifica se o **rclone** está instalado e orienta o usuário a instalá-lo se necessário  
-- Configura o **Google Drive** via navegador padrão  
-- Cria a pasta de montagem automaticamente (`~/GoogleDrive`)  
-- Monta o Drive nessa pasta  
-- Abre o gerenciador de arquivos padrão diretamente na pasta montada  
-- Funciona em qualquer distribuição Linux e também no Termux (Android)
+# Detecta gerenciador de arquivos
+detect_file_manager() {
+    for fm in xdg-open nautilus dolphin thunar pcmanfm nemo caja; do
+        if command -v "$fm" >/dev/null 2>&1; then
+            echo "$fm"
+            return
+        fi
+    done
+}
 
----
+# Verifica se o rclone está instalado
+if ! command -v rclone >/dev/null 2>&1; then
+    echo "❌ O Rclone não está instalado."
+    echo ""
+    echo "👉 Instale o Rclone antes de continuar:"
+    echo "   • Debian/Ubuntu:   sudo apt install rclone"
+    echo "   • Fedora/DNF:      sudo dnf install rclone"
+    echo "   • Arch/Manjaro:    sudo pacman -S rclone"
+    echo "   • Ou baixe direto: https://rclone.org/downloads/"
+    echo ""
+    exit 1
+fi
 
-## 🧰 Requisitos
+# Cria pasta de montagem
+mkdir -p "$MOUNT_DIR"
 
-- Uma conta Google  
-- Conexão com a internet  
-- O pacote `rclone` instalado (necessário para montar o Google Drive)
+# Se o remote não existir, abre o menu interativo
+if ! rclone listremotes | grep -q "^${REMOTE_NAME}:"; then
+    echo "🔧 Nenhuma configuração do Google Drive encontrada."
+    echo "👉 O Rclone abrirá o menu de configuração agora."
+    sleep 2
+    BROWSER_CMD=$(detect_browser)
+    export BROWSER="$BROWSER_CMD"
+    rclone config
+fi
 
----
+# Testa se o token está válido (tenta listar a raiz do drive)
+echo "🔎 Verificando conexão com o Google Drive..."
+if ! rclone lsd "${REMOTE_NAME}:" >/dev/null 2>&1; then
+    echo "⚠️ Token inválido ou expirado. Reautenticando..."
+    BROWSER_CMD=$(detect_browser)
+    export BROWSER="$BROWSER_CMD"
+    rclone config reconnect "${REMOTE_NAME}:" || {
+        echo "❌ Falha ao reconectar. Execute manualmente: rclone config reconnect ${REMOTE_NAME}:"
+        exit 1
+    }
+    echo "✅ Reautenticação concluída!"
+fi
 
-## 💿 Instalação
+# Monta o drive em segundo plano
+echo "🔗 Montando Google Drive em: $MOUNT_DIR ..."
+rclone mount "$REMOTE_NAME": "$MOUNT_DIR" --daemon
+sleep 2
 
-Clone o repositório e dê permissão de execução:
+# Abre o gerenciador de arquivos
+FILE_MANAGER=$(detect_file_manager)
+if [ -n "$FILE_MANAGER" ]; then
+    echo "📂 Abrindo $MOUNT_DIR no gerenciador de arquivos..."
+    nohup "$FILE_MANAGER" "$MOUNT_DIR" >/dev/null 2>&1 &
+else
+    echo "⚠️ Nenhum gerenciador de arquivos detectado. Use:"
+    echo "   xdg-open \"$MOUNT_DIR\""
+fi
 
-```bash
-git clone https://github.com/sshs3rejo/gdrive-mount.git
-cd gdrive-mount
-chmod +x gdrive-mount.sh
-
-Para desmontar o Google Drive e liberar o ponto de montagem:
-fusermount -u ~/GoogleDrive
-
-No Termux (Android):
-termux-umount ~/GoogleDrive
+echo "✅ Google Drive montado com sucesso em $MOUNT_DIR"
