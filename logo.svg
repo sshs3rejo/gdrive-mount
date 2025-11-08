@@ -1,0 +1,9 @@
+<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="150" rx="20" fill="#1A73E8"/>
+  <polygon points="45,110 75,55 105,110" fill="#34A853"/>
+  <polygon points="75,55 105,110 125,75" fill="#FBBC05"/>
+  <polygon points="45,110 25,75 75,55" fill="#EA4335"/>
+  <text x="50%" y="140" text-anchor="middle" fill="white" font-family="monospace" font-size="16" font-weight="bold">
+    GDrive
+  </text>
+</svg>
