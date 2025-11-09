@@ -28,17 +28,10 @@ Este script automatiza a configuração e montagem do seu Drive em uma pasta loc
 
 ---
 
-## 💿 Instalação
-
-Clone o repositório e dê permissão de execução:
+## 💿 Instalação e Uso
 
 ```bash
 git clone https://github.com/sshs3rejo/gdrive-mount.git
 cd gdrive-mount
 chmod +x gdrive-mount.sh
-
-Para desmontar o Google Drive e liberar o ponto de montagem:
-fusermount -u ~/GoogleDrive
-
-No Termux (Android):
-termux-umount ~/GoogleDrive
+./gdrive-mount.sh
