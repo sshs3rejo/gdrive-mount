@@ -69,9 +69,13 @@ if ! rclone lsd "${REMOTE_NAME}:" >/dev/null 2>&1; then
     echo "✅ Reautenticação concluída!"
 fi
 
-# Monta o drive em segundo plano
+# Monta o drive em segundo plano com suporte a edição
 echo "🔗 Montando Google Drive em: $MOUNT_DIR ..."
-rclone mount "$REMOTE_NAME": "$MOUNT_DIR" --daemon
+rclone mount "$REMOTE_NAME": "$MOUNT_DIR" \
+    --vfs-cache-mode full \
+    --vfs-cache-max-size 100M \
+    --vfs-cache-poll-interval 15s \
+    --daemon
 sleep 2
 
 # Abre o gerenciador de arquivos
