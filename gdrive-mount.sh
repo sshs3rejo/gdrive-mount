@@ -3,11 +3,13 @@
 # ----------------------------------------
 # Configura e monta o Google Drive via Rclone
 # Compatível com qualquer Linux
+# Otimizado para edição com LibreOffice e OnlyOffice
 # ----------------------------------------
 
 set -e
 
-REMOTE_NAME="gdrive"
+# Pergunta o nome do remote
+read -p "Digite o nome do seu remote do Google Drive (ex: gdrive): " REMOTE_NAME
 MOUNT_DIR="$HOME/GDrive"
 
 # Detecta navegador padrão
@@ -48,7 +50,7 @@ mkdir -p "$MOUNT_DIR"
 
 # Se o remote não existir, abre o menu interativo
 if ! rclone listremotes | grep -q "^${REMOTE_NAME}:"; then
-    echo "🔧 Nenhuma configuração do Google Drive encontrada."
+    echo "🔧 Nenhuma configuração do Google Drive encontrada para '$REMOTE_NAME'."
     echo "👉 O Rclone abrirá o menu de configuração agora."
     sleep 2
     BROWSER_CMD=$(detect_browser)
@@ -69,12 +71,14 @@ if ! rclone lsd "${REMOTE_NAME}:" >/dev/null 2>&1; then
     echo "✅ Reautenticação concluída!"
 fi
 
-# Monta o drive em segundo plano com suporte a edição
+# Monta o drive em segundo plano com suporte a edição e otimização para OnlyOffice
 echo "🔗 Montando Google Drive em: $MOUNT_DIR ..."
 rclone mount "$REMOTE_NAME": "$MOUNT_DIR" \
     --vfs-cache-mode full \
-    --vfs-cache-max-size 100M \
-    --vfs-cache-poll-interval 15s \
+    --vfs-cache-max-size 1G \
+    --vfs-cache-max-age 2h \
+    --vfs-read-chunk-size 128M \
+    --vfs-read-chunk-size-limit 2G \
     --daemon
 sleep 2
 
