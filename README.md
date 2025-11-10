@@ -29,5 +29,12 @@ Este script automatiza a configuração e montagem do seu Drive em uma pasta loc
 ```bash
 git clone https://github.com/sshs3rejo/gdrive-mount.git
 cd gdrive-mount
-chmod +x gdrive-mount.sh
-./gdrive-mount.sh
+chmod +x gdrive-mount
+./gdrive-mount
+```
+
+Para checar o status do script:
+
+```bash
+./gdrive-mount status
+```

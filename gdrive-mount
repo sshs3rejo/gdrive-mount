@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+# ================================================
+# gdrive-mount — Monta Google Drive automaticamente
+# Agora com cores e modo status
+# ================================================
+
+set -e
+
+REMOTE_NAME="gdrive"
+MOUNT_DIR="$HOME/GDrive"
+
+# ===== CORES =====
+color_info="\e[34m"
+color_ok="\e[32m"
+color_warn="\e[33m"
+color_error="\e[31m"
+color_reset="\e[0m"
+
+msg() {
+    echo -e "${1}${2}${color_reset}"
+}
+
+# ===== Detecta navegador =====
+detect_browser() {
+    for b in xdg-open sensible-browser gnome-open kde-open firefox chromium google-chrome brave vivaldi; do
+        if command -v "$b" >/dev/null 2>&1; then echo "$b"; return; fi
+    done
+}
+
+# ===== Detecta file manager =====
+detect_file_manager() {
+    for fm in xdg-open nautilus dolphin thunar pcmanfm nemo caja; do
+        if command -v "$fm" >/dev/null 2>&1; then echo "$fm"; return; fi
+    done
+}
+
+# ===== Verifica status =====
+status_mode() {
+    msg "$color_info" "📌 STATUS DO GDRIVE-MOUNT"
+    echo ""
+
+    # Remote
+    if rclone listremotes | grep -q "^${REMOTE_NAME}:"; then
+        msg "$color_ok" "✅ Remote detectado: ${REMOTE_NAME}"
+    else
+        msg "$color_warn" "❌ Remote não encontrado"
+    fi
+
+    # Montagem
+    if mount | grep -q "$MOUNT_DIR"; then
+        PID=$(pgrep -f "rclone mount ${REMOTE_NAME}")
+        msg "$color_ok" "✅ Google Drive montado em $MOUNT_DIR (PID: $PID)"
+    else
+        msg "$color_warn" "⚠️ Ainda não montado"
+    fi
+
+    # Teste de acesso
+    if rclone lsd "${REMOTE_NAME}:" >/dev/null 2>&1; then
+        msg "$color_ok" "✅ Acesso ao Drive: OK"
+    else
+        msg "$color_error" "❌ Não foi possível acessar o Google Drive"
+    fi
+
+    echo ""
+    exit 0
+}
+
+# ===== Suporte ao comando "status" =====
+if [ "$1" = "status" ]; then
+    status_mode
+fi
+
+# ===== Verifica rclone =====
+if ! command -v rclone >/dev/null 2>&1; then
+    msg "$color_error" "❌ O Rclone não está instalado."
+    msg "$color_info"  "👉 Instale via gerenciador de pacotes e tente novamente."
+    exit 1
+fi
+
+# ===== Cria pasta de montagem =====
+mkdir -p "$MOUNT_DIR"
+
+# ===== Cria remote se não existir =====
+if ! rclone listremotes | grep -q "^${REMOTE_NAME}:"; then
+    msg "$color_info" "🔧 Criando remote automaticamente..."
+    BROWSER_CMD=$(detect_browser)
+    export BROWSER="$BROWSER_CMD"
+    rclone config create "$REMOTE_NAME" drive scope drive file-is-shared true
+    msg "$color_ok" "✅ Remote criado!"
+fi
+
+# ===== Verifica acesso =====
+msg "$color_info" "🔎 Verificando token..."
+if ! rclone lsd "${REMOTE_NAME}:" >/dev/null 2>&1; then
+    msg "$color_warn" "⚠️ Token expirado, reautenticando..."
+    BROWSER_CMD=$(detect_browser)
+    export BROWSER="$BROWSER_CMD"
+    rclone config reconnect "${REMOTE_NAME}:" || {
+        msg "$color_error" "❌ Falha ao reconectar token!"
+        exit 1
+    }
+    msg "$color_ok" "✅ Token renovado!"
+fi
+
+# ===== Montagem =====
+msg "$color_info" "🔗 Montando Google Drive em: $MOUNT_DIR ..."
+
+rclone mount "$REMOTE_NAME": "$MOUNT_DIR" \
+    --vfs-cache-mode full \
+    --vfs-cache-max-size 300M \
+    --vfs-cache-max-age 30m \
+    --vfs-read-chunk-size 64M \
+    --vfs-read-chunk-size-limit 1G \
+    --daemon
+
+sleep 2
+
+# ===== Abre file manager =====
+FILE_MANAGER=$(detect_file_manager)
+
+if [ -n "$FILE_MANAGER" ]; then
+    msg "$color_info" "📂 Abrindo $MOUNT_DIR..."
+    nohup "$FILE_MANAGER" "$MOUNT_DIR" >/dev/null 2>&1 &
+else
+    msg "$color_warn" "⚠️ Nenhum gerenciador detectado. Use:"
+    echo "xdg-open \"$MOUNT_DIR\""
+fi
+
+msg "$color_ok" "✅ Google Drive montado com sucesso!"
